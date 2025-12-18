@@ -1,36 +1,284 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Voice AI Call Center SaaS
 
-## Getting Started
+A full-stack SaaS application for building and managing AI-powered voice call centers. Built with Next.js, Supabase, Stripe, and a flexible voice provider abstraction layer.
 
-First, run the development server:
+## 🚀 Features
+
+- **Multi-tenant Architecture**: Organizations and workspaces with row-level security
+- **AI Voice Agents**: Create and configure intelligent voice agents with custom personalities and instructions
+- **Call Management**: Handle inbound and outbound calls with real-time logging and transcripts
+- **Analytics Dashboard**: Track call volume, duration, outcomes, and agent performance
+- **Stripe Integration**: Subscription management with usage-based billing
+- **Voice Provider Abstraction**: Easy to integrate with any voice provider (Vapi, Retell, etc.)
+
+## 🛠️ Tech Stack
+
+- **Framework**: Next.js 16 (App Router)
+- **Database**: Supabase (PostgreSQL with RLS)
+- **Authentication**: Supabase Auth
+- **Payments**: Stripe
+- **UI**: React 19, Tailwind CSS 4
+- **Charts**: Recharts
+- **Validation**: Zod
+- **TypeScript**: Strict mode
+
+## 📋 Prerequisites
+
+- Node.js 18+ and npm
+- Supabase account and project
+- Stripe account (for payments)
+- (Optional) Voice provider account (Vapi, Retell, etc.)
+
+## 🏗️ Architecture
+
+### Database Schema
+
+The application uses the following main tables:
+
+- `organizations` - Multi-tenant workspaces
+- `profiles` - User profiles (extends Supabase auth.users)
+- `organization_members` - Many-to-many relationship between users and organizations
+- `agents` - AI voice agent configurations
+- `phone_numbers` - Connected phone numbers
+- `calls` - Call records with transcripts and summaries
+- `call_events` - Detailed call event timeline
+- `subscriptions` - Stripe subscription records
+- `usage_records` - Usage tracking for metered billing
+
+All tables have Row Level Security (RLS) policies for multi-tenant isolation.
+
+### Voice Provider Abstraction
+
+The application includes a flexible abstraction layer for voice providers:
+
+- `src/lib/voice/provider.ts` - Provider factory
+- `src/lib/voice/mock-provider.ts` - Mock provider for development
+- `src/lib/voice/types.ts` - Type definitions
+
+To add a new provider, implement the `VoiceProvider` interface and update the factory.
+
+## 🚦 Getting Started
+
+### 1. Clone and Install
+
+```bash
+git clone <repository-url>
+cd voice-ai-call-center
+npm install
+```
+
+### 2. Set Up Supabase
+
+1. Create a new Supabase project at [supabase.com](https://supabase.com)
+2. Run the SQL schema from `supabase/schema.sql` in your Supabase SQL editor
+3. Get your project URL and anon key from Project Settings > API
+
+### 3. Set Up Stripe
+
+1. Create a Stripe account at [stripe.com](https://stripe.com)
+2. Create products and prices for Starter and Pro plans
+3. Set up a webhook endpoint: `https://your-domain.com/api/stripe/webhook`
+4. Get your webhook secret from the Stripe dashboard
+
+### 4. Configure Environment Variables
+
+Copy `.env.example` to `.env.local` and fill in your values:
+
+```bash
+cp .env.example .env.local
+```
+
+Required variables:
+- `NEXT_PUBLIC_SUPABASE_URL` - Your Supabase project URL
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` - Your Supabase anon key
+- `STRIPE_SECRET_KEY` - Your Stripe secret key
+- `STRIPE_WEBHOOK_SECRET` - Your Stripe webhook secret
+- `STRIPE_STARTER_PRICE_ID` - Stripe price ID for Starter plan
+- `STRIPE_PRO_PRICE_ID` - Stripe price ID for Pro plan
+
+### 5. Run Development Server
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 📁 Project Structure
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```
+src/
+├── app/                    # Next.js App Router pages
+│   ├── api/                # API routes
+│   │   ├── stripe/         # Stripe webhooks and checkout
+│   │   ├── webhooks/       # Voice provider webhooks
+│   │   └── calls/          # Call management APIs
+│   ├── dashboard/          # Dashboard pages
+│   │   ├── agents/         # Agent management
+│   │   ├── calls/          # Call logs and details
+│   │   ├── analytics/      # Analytics dashboard
+│   │   └── settings/      # Settings and billing
+│   ├── login/              # Auth pages
+│   ├── signup/
+│   └── reset-password/
+├── components/             # React components
+│   ├── ui/                 # Reusable UI components
+│   └── dashboard/          # Dashboard-specific components
+├── lib/                    # Utility libraries
+│   ├── supabase/           # Supabase client and auth
+│   ├── stripe/              # Stripe integration
+│   ├── voice/               # Voice provider abstraction
+│   ├── types/               # TypeScript types
+│   └── schemas/             # Zod validation schemas
+└── supabase/               # Database schema SQL
+```
 
-## Learn More
+## 🔐 Authentication & Authorization
 
-To learn more about Next.js, take a look at the following resources:
+- Users sign up and create an organization automatically
+- Organization members have roles: `owner`, `admin`, or `member`
+- RLS policies enforce multi-tenant isolation
+- All database queries are scoped to the user's organizations
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 💳 Stripe Integration
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Plans
 
-## Deploy on Vercel
+- **Starter**: $29/month - 500 calls, 1,000 minutes, 3 agents
+- **Pro**: $99/month - 5,000 calls, 10,000 minutes, 20 agents
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Webhook Events Handled
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `checkout.session.completed` - Create subscription
+- `customer.subscription.updated` - Update subscription
+- `customer.subscription.deleted` - Cancel subscription
+- `invoice.payment_succeeded` - Handle successful payment
+- `invoice.payment_failed` - Handle failed payment
+
+## 📞 Voice Provider Integration
+
+### Mock Provider (Development)
+
+The mock provider simulates call events for development. No real calls are made.
+
+### Adding a Real Provider
+
+1. Create a new provider class implementing `VoiceProvider` interface
+2. Update `src/lib/voice/provider.ts` to include your provider
+3. Set `VOICE_PROVIDER` environment variable
+4. Configure webhook endpoint in provider dashboard
+
+### Webhook Endpoint
+
+Voice providers should send events to:
+```
+POST /api/webhooks/voice
+```
+
+Supported events:
+- `call-started` / `call.initiated`
+- `call-ringing` / `call.ringing`
+- `call-connected` / `call.connected`
+- `call-ended` / `call.ended`
+- `transcript` / `call.transcript`
+- `call-summary` / `call.summary`
+
+## 🚀 Deployment
+
+### Vercel Deployment
+
+1. Push your code to GitHub
+2. Import project in Vercel
+3. Add environment variables in Vercel dashboard
+4. Deploy
+
+### Supabase Setup
+
+1. Run migrations in Supabase SQL editor
+2. Configure RLS policies
+3. Set up database functions and triggers
+
+### Stripe Webhook Setup
+
+1. Create webhook endpoint in Stripe dashboard
+2. Point to: `https://your-domain.com/api/stripe/webhook`
+3. Select events: `checkout.session.completed`, `customer.subscription.*`, `invoice.*`
+4. Copy webhook secret to environment variables
+
+## 📊 Usage Tracking
+
+The application tracks usage for:
+- Calls (per call)
+- Minutes (per minute)
+
+Usage records are created automatically when calls end and can be synced to Stripe for metered billing.
+
+## 🔒 Security
+
+- Row Level Security (RLS) on all tables
+- Multi-tenant data isolation
+- Secure API routes with authentication checks
+- Environment variables for sensitive data
+- Stripe webhook signature verification
+
+## 🧪 Development
+
+### Running Tests
+
+```bash
+npm run test
+```
+
+### Linting
+
+```bash
+npm run lint
+```
+
+### Type Checking
+
+```bash
+npx tsc --noEmit
+```
+
+## 📝 Environment Variables
+
+See `.env.example` for all required environment variables.
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Submit a pull request
+
+## 📄 License
+
+MIT License
+
+## 🆘 Support
+
+For issues and questions:
+- Check the documentation
+- Review the code comments
+- Open an issue on GitHub
+
+## 🎯 Roadmap
+
+- [ ] Real-time call monitoring
+- [ ] Advanced analytics and reporting
+- [ ] Custom voice models
+- [ ] Multi-language support improvements
+- [ ] API for third-party integrations
+- [ ] Mobile app
+- [ ] Call recording playback
+- [ ] Sentiment analysis
+
+## 🙏 Acknowledgments
+
+Built with:
+- [Next.js](https://nextjs.org/)
+- [Supabase](https://supabase.com/)
+- [Stripe](https://stripe.com/)
+- [Tailwind CSS](https://tailwindcss.com/)
+- [Recharts](https://recharts.org/)
