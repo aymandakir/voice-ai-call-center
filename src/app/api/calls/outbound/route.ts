@@ -31,12 +31,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Agent not found' }, { status: 404 })
     }
 
-    const agent = agentData as { id: string; organization_id: string; voice_provider_id: string | null; phone_numbers: PhoneNumber[] | null }
+    // Extract values to avoid TypeScript inference issues
+    const agentId = (agentData as any).id as string
+    const organizationId = (agentData as any).organization_id as string
+    const voiceProviderId = (agentData as any).voice_provider_id as string | null
+    const phoneNumbers = (agentData as any).phone_numbers as PhoneNumber[] | null
 
     // Verify user has access to organization
     const { data: membership } = await (supabase.from('organization_members') as any)
       .select('*')
-      .eq('organization_id', agent.organization_id)
+      .eq('organization_id', organizationId)
       .eq('user_id', user.id)
       .single()
 
@@ -45,8 +49,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Get phone number
-    const phoneNumber = Array.isArray(agent.phone_numbers) && agent.phone_numbers.length > 0
-      ? agent.phone_numbers[0]
+    const phoneNumber = Array.isArray(phoneNumbers) && phoneNumbers.length > 0
+      ? phoneNumbers[0]
       : null
 
     const fromNum = from_number || phoneNumber?.number || ''
@@ -57,8 +61,8 @@ export async function POST(request: NextRequest) {
 
     // Create call record
     const callInsert = {
-      organization_id: agent.organization_id,
-      agent_id: agent.id,
+      organization_id: organizationId,
+      agent_id: agentId,
       phone_number_id: phoneNumber?.id || null,
       direction: 'outbound' as const,
       from_number: fromNum,
@@ -85,7 +89,7 @@ export async function POST(request: NextRequest) {
 
     try {
       const providerResponse = await provider.startOutboundCall({
-        agentId: agent.voice_provider_id || agent.id,
+        agentId: voiceProviderId || agentId,
         fromNumber: fromNum,
         toNumber: to_number,
         webhookUrl,
