@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getVoiceProvider } from '@/lib/voice/provider'
+import type { Agent, PhoneNumber, Call } from '@/lib/types/entities'
 
 // API route to initiate outbound calls
 export async function POST(request: NextRequest) {
@@ -21,19 +22,19 @@ export async function POST(request: NextRequest) {
     }
 
     // Get agent and verify access
-    const { data: agent, error: agentError } = await supabase
-      .from('agents')
-      .select('*, organization_id, phone_numbers(*)')
+    const { data: agentData, error: agentError } = await (supabase.from('agents') as any)
+      .select('id, organization_id, voice_provider_id, phone_numbers(*)')
       .eq('id', agent_id)
       .single()
 
-    if (agentError || !agent) {
+    if (agentError || !agentData) {
       return NextResponse.json({ error: 'Agent not found' }, { status: 404 })
     }
 
+    const agent = agentData as { id: string; organization_id: string; voice_provider_id: string | null; phone_numbers: PhoneNumber[] | null }
+
     // Verify user has access to organization
-    const { data: membership } = await supabase
-      .from('organization_members')
+    const { data: membership } = await (supabase.from('organization_members') as any)
       .select('*')
       .eq('organization_id', agent.organization_id)
       .eq('user_id', user.id)
@@ -55,24 +56,28 @@ export async function POST(request: NextRequest) {
     }
 
     // Create call record
-    const { data: call, error: callError } = await supabase
+    const callInsert = {
+      organization_id: agent.organization_id,
+      agent_id: agent.id,
+      phone_number_id: phoneNumber?.id || null,
+      direction: 'outbound' as const,
+      from_number: fromNum,
+      to_number: to_number,
+      status: 'initiated' as const,
+    }
+    // @ts-ignore - Supabase type inference issue with Database types
+    const { data: callData, error: callError } = await supabase
       .from('calls')
-      .insert({
-        organization_id: agent.organization_id,
-        agent_id: agent.id,
-        phone_number_id: phoneNumber?.id || null,
-        direction: 'outbound',
-        from_number: fromNum,
-        to_number: to_number,
-        status: 'initiated',
-      })
+      .insert(callInsert as any)
       .select()
       .single()
 
-    if (callError) {
+    if (callError || !callData) {
       console.error('Error creating call:', callError)
       return NextResponse.json({ error: 'Failed to create call' }, { status: 500 })
     }
+
+    const call = callData as Call
 
     // Start call via voice provider
     const provider = getVoiceProvider()
@@ -87,8 +92,7 @@ export async function POST(request: NextRequest) {
       })
 
       // Update call with provider call ID
-      await supabase
-        .from('calls')
+      await (supabase.from('calls') as any)
         .update({ provider_call_id: providerResponse.providerCallId })
         .eq('id', call.id)
 
@@ -100,8 +104,7 @@ export async function POST(request: NextRequest) {
     } catch (providerError) {
       console.error('Provider error:', providerError)
       // Update call status to failed
-      await supabase
-        .from('calls')
+      await (supabase.from('calls') as any)
         .update({ status: 'failed' })
         .eq('id', call.id)
 
