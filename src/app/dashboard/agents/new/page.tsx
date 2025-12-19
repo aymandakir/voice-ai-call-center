@@ -41,21 +41,24 @@ export default function NewAgentPage() {
       } = await supabase.auth.getUser()
       if (!user) throw new Error('Not authenticated')
 
-      const { data: membership } = await supabase
+      const { data: membershipData } = await supabase
         .from('organization_members')
         .select('organization_id')
         .eq('user_id', user.id)
         .single()
 
-      if (!membership) throw new Error('No organization found')
+      if (!membershipData || typeof membershipData !== 'object' || !('organization_id' in membershipData)) {
+        throw new Error('No organization found')
+      }
+      const membership = membershipData as { organization_id: string }
 
       // Create agent
-      const { data: agent, error: agentError } = await supabase
-        .from('agents')
-        .insert({
-          organization_id: membership.organization_id,
-          ...validated,
-        })
+      const agentInsert: any = {
+        organization_id: membership.organization_id,
+        ...validated,
+      }
+      const { data: agent, error: agentError } = await (supabase.from('agents') as any)
+        .insert(agentInsert)
         .select()
         .single()
 

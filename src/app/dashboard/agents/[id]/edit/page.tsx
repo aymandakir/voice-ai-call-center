@@ -32,21 +32,22 @@ export default function EditAgentPage() {
         .eq('id', agentId)
         .single()
 
-      if (fetchError) {
+      if (fetchError || !data) {
         setError('Agent not found')
         return
       }
 
-      setAgent(data)
+      const agentData = data as Agent
+      setAgent(agentData)
       setFormData({
-        name: data.name,
-        persona: data.persona || '',
-        language: data.language,
-        instructions: data.instructions,
-        model: data.model,
-        temperature: data.temperature,
-        first_message: data.first_message || '',
-        is_active: data.is_active,
+        name: agentData.name,
+        persona: agentData.persona || '',
+        language: agentData.language,
+        instructions: agentData.instructions,
+        model: agentData.model,
+        temperature: agentData.temperature,
+        first_message: agentData.first_message || '',
+        is_active: agentData.is_active,
       })
       setFetching(false)
     }
@@ -65,8 +66,7 @@ export default function EditAgentPage() {
       const validated = updateAgentSchema.parse(formData)
       const supabase = createClient()
 
-      const { error: updateError } = await supabase
-        .from('agents')
+      const { error: updateError } = await (supabase.from('agents') as any)
         .update(validated)
         .eq('id', agentId)
 

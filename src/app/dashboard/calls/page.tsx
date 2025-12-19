@@ -13,17 +13,15 @@ async function getCalls() {
 
   if (!user) return []
 
-  const { data: memberships } = await supabase
-    .from('organization_members')
+  const { data: memberships } = await (supabase.from('organization_members') as any)
     .select('organization_id')
     .eq('user_id', user.id)
 
   if (!memberships || memberships.length === 0) return []
 
-  const orgIds = memberships.map((m) => m.organization_id)
+  const orgIds = (memberships as Array<{ organization_id: string }>).map((m) => m.organization_id)
 
-  const { data: calls } = await supabase
-    .from('calls')
+  const { data: calls } = await (supabase.from('calls') as any)
     .select('*, agent:agents(name)')
     .in('organization_id', orgIds)
     .order('created_at', { ascending: false })
@@ -95,7 +93,7 @@ export default async function CallsPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
-                  {calls.map((call) => (
+                  {calls.map((call: any) => (
                     <tr key={call.id} className="hover:bg-gray-50 dark:hover:bg-gray-900">
                       <td className="px-6 py-4 whitespace-nowrap">
                         {call.direction === 'inbound' ? (

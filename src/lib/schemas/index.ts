@@ -67,8 +67,8 @@ export const updateCallSchema = z.object({
 // Call event schemas
 export const callEventSchema = z.object({
   call_id: z.string().uuid(),
-  event_type: z.enum(['started', 'ringing', 'connected', 'transcript', 'ended', 'error']),
-  data: z.record(z.any()),
+  event_type: z.enum(['started', 'ringing', 'connected', 'transcript', 'ended', 'error'] as const),
+  data: z.record(z.string(), z.any()),
 })
 
 // Auth schemas

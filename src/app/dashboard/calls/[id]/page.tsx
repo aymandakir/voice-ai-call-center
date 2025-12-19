@@ -14,17 +14,15 @@ async function getCall(id: string) {
 
   if (!user) return null
 
-  const { data: memberships } = await supabase
-    .from('organization_members')
+  const { data: memberships } = await (supabase.from('organization_members') as any)
     .select('organization_id')
     .eq('user_id', user.id)
 
   if (!memberships || memberships.length === 0) return null
 
-  const orgIds = memberships.map((m) => m.organization_id)
+  const orgIds = (memberships as Array<{ organization_id: string }>).map((m) => m.organization_id)
 
-  const { data: call } = await supabase
-    .from('calls')
+  const { data: call } = await (supabase.from('calls') as any)
     .select('*, agent:agents(*), events:call_events(*)')
     .eq('id', id)
     .in('organization_id', orgIds)
@@ -115,7 +113,7 @@ export default async function CallDetailPage({ params }: { params: { id: string 
               <div>
                 <p className="text-sm text-gray-500 mb-2">Tags</p>
                 <div className="flex flex-wrap gap-2">
-                  {call.tags.map((tag, idx) => (
+                  {call.tags.map((tag: string, idx: number) => (
                     <span
                       key={idx}
                       className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-3 py-1 text-sm dark:bg-gray-800"
@@ -163,8 +161,8 @@ export default async function CallDetailPage({ params }: { params: { id: string 
             <CardContent>
               <div className="space-y-4">
                 {events
-                  .sort((a, b) => new Date(a.occurred_at).getTime() - new Date(b.occurred_at).getTime())
-                  .map((event) => (
+                  .sort((a: any, b: any) => new Date(a.occurred_at).getTime() - new Date(b.occurred_at).getTime())
+                  .map((event: any) => (
                     <div key={event.id} className="flex gap-4">
                       <div className="flex flex-col items-center">
                         <div className="h-2 w-2 rounded-full bg-blue-500" />

@@ -55,7 +55,7 @@ export default function SignUpPage() {
       }
 
       // Create profile
-      const { error: profileError } = await supabase.from('profiles').insert({
+      const { error: profileError } = await (supabase.from('profiles') as any).insert({
         id: authData.user.id,
         email: formData.email,
         full_name: formData.full_name,
@@ -68,8 +68,7 @@ export default function SignUpPage() {
 
       // Create organization
       const orgSlug = slugify(formData.organization_name)
-      const { data: orgData, error: orgError } = await supabase
-        .from('organizations')
+      const { data: orgData, error: orgError } = await (supabase.from('organizations') as any)
         .insert({
           name: formData.organization_name,
           slug: orgSlug,
@@ -84,7 +83,7 @@ export default function SignUpPage() {
       }
 
       // Add user as owner
-      const { error: memberError } = await supabase.from('organization_members').insert({
+      const { error: memberError } = await (supabase.from('organization_members') as any).insert({
         organization_id: orgData.id,
         user_id: authData.user.id,
         role: 'owner',

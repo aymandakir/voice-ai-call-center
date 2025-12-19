@@ -13,18 +13,16 @@ async function getStats() {
   if (!user) return null
 
   // Get user's organizations
-  const { data: memberships } = await supabase
-    .from('organization_members')
+  const { data: memberships } = await (supabase.from('organization_members') as any)
     .select('organization_id')
     .eq('user_id', user.id)
 
   if (!memberships || memberships.length === 0) return null
 
-  const orgIds = memberships.map((m) => m.organization_id)
+  const orgIds = (memberships as Array<{ organization_id: string }>).map((m) => m.organization_id)
 
   // Get total calls
-  const { count: totalCalls } = await supabase
-    .from('calls')
+  const { count: totalCalls } = await (supabase.from('calls') as any)
     .select('*', { count: 'exact', head: true })
     .in('organization_id', orgIds)
 
@@ -33,21 +31,18 @@ async function getStats() {
   startOfMonth.setDate(1)
   startOfMonth.setHours(0, 0, 0, 0)
 
-  const { count: callsThisMonth } = await supabase
-    .from('calls')
+  const { count: callsThisMonth } = await (supabase.from('calls') as any)
     .select('*', { count: 'exact', head: true })
     .in('organization_id', orgIds)
     .gte('created_at', startOfMonth.toISOString())
 
   // Get total agents
-  const { count: totalAgents } = await supabase
-    .from('agents')
+  const { count: totalAgents } = await (supabase.from('agents') as any)
     .select('*', { count: 'exact', head: true })
     .in('organization_id', orgIds)
 
   // Get average call duration
-  const { data: calls } = await supabase
-    .from('calls')
+  const { data: calls } = await (supabase.from('calls') as any)
     .select('duration_seconds')
     .in('organization_id', orgIds)
     .gte('created_at', startOfMonth.toISOString())
@@ -55,7 +50,7 @@ async function getStats() {
 
   const avgDuration =
     calls && calls.length > 0
-      ? Math.round(calls.reduce((acc, c) => acc + (c.duration_seconds || 0), 0) / calls.length)
+      ? Math.round((calls as Array<{ duration_seconds: number | null }>).reduce((acc: number, c: any) => acc + (c.duration_seconds || 0), 0) / calls.length)
       : 0
 
   return {

@@ -1,31 +1,34 @@
-import { createClient } from '@/lib/supabase/server'
+'use client'
+
+import { useEffect, useState } from 'react'
+import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 import { format } from 'date-fns'
 
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8']
+
 async function getAnalytics() {
-  const supabase = await createClient()
+  const supabase = createClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
 
   if (!user) return null
 
-  const { data: memberships } = await supabase
-    .from('organization_members')
+  const { data: memberships } = await (supabase.from('organization_members') as any)
     .select('organization_id')
     .eq('user_id', user.id)
 
   if (!memberships || memberships.length === 0) return null
 
-  const orgIds = memberships.map((m) => m.organization_id)
+  const orgIds = (memberships as Array<{ organization_id: string }>).map((m) => m.organization_id)
 
   // Get calls from last 30 days
   const thirtyDaysAgo = new Date()
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
 
-  const { data: calls } = await supabase
-    .from('calls')
+  const { data: calls } = await (supabase.from('calls') as any)
     .select('*')
     .in('organization_id', orgIds)
     .gte('created_at', thirtyDaysAgo.toISOString())
@@ -34,7 +37,7 @@ async function getAnalytics() {
 
   // Group by date
   const callsByDate: Record<string, number> = {}
-  calls.forEach((call) => {
+  ;(calls as Array<{ created_at: string }>).forEach((call) => {
     const date = format(new Date(call.created_at), 'MMM d')
     callsByDate[date] = (callsByDate[date] || 0) + 1
   })
@@ -45,7 +48,7 @@ async function getAnalytics() {
 
   // Outcome distribution
   const outcomes: Record<string, number> = {}
-  calls.forEach((call) => {
+  ;(calls as Array<{ outcome: string | null }>).forEach((call) => {
     const outcome = call.outcome || 'unknown'
     outcomes[outcome] = (outcomes[outcome] || 0) + 1
   })
@@ -55,16 +58,17 @@ async function getAnalytics() {
     value,
   }))
 
+  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8']
+
   // Agent performance
-  const { data: agents } = await supabase
-    .from('agents')
+  const { data: agents } = await (supabase.from('agents') as any)
     .select('id, name')
     .in('organization_id', orgIds)
 
   const agentStats: Record<string, { name: string; calls: number; totalDuration: number }> = {}
-  calls.forEach((call) => {
+  ;(calls as Array<{ agent_id: string; duration_seconds: number | null }>).forEach((call) => {
     if (!agentStats[call.agent_id]) {
-      const agent = agents?.find((a) => a.id === call.agent_id)
+      const agent = (agents as Array<{ id: string; name: string }> | undefined)?.find((a) => a.id === call.agent_id)
       agentStats[call.agent_id] = {
         name: agent?.name || 'Unknown',
         calls: 0,
@@ -81,20 +85,34 @@ async function getAnalytics() {
     avgDuration: Math.round(stat.totalDuration / stat.calls),
   }))
 
-  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8']
-
   return {
     chartData,
     outcomeData,
     agentData,
     totalCalls: calls.length,
-    totalDuration: calls.reduce((acc, c) => acc + (c.duration_seconds || 0), 0),
-    avgDuration: Math.round(calls.reduce((acc, c) => acc + (c.duration_seconds || 0), 0) / calls.length),
+    totalDuration: (calls as Array<{ duration_seconds: number | null }>).reduce((acc, c) => acc + (c.duration_seconds || 0), 0),
+    avgDuration: Math.round((calls as Array<{ duration_seconds: number | null }>).reduce((acc, c) => acc + (c.duration_seconds || 0), 0) / calls.length),
   }
 }
 
-export default async function AnalyticsPage() {
-  const analytics = await getAnalytics()
+export default function AnalyticsPage() {
+  const [analytics, setAnalytics] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    getAnalytics().then((data) => {
+      setAnalytics(data)
+      setLoading(false)
+    })
+  }, [])
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12">
+        <p className="text-gray-600 dark:text-gray-400">Loading analytics...</p>
+      </div>
+    )
+  }
 
   if (!analytics) {
     return (
@@ -175,12 +193,12 @@ export default async function AnalyticsPage() {
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  label={({ name, percent }) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}
                   outerRadius={80}
                   fill="#8884d8"
                   dataKey="value"
                 >
-                  {analytics.outcomeData.map((entry, index) => (
+                  {analytics.outcomeData.map((entry: any, index: number) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>

@@ -38,8 +38,7 @@ export async function getCurrentOrganization(organizationId: string) {
   if (!user) return null
 
   // Verify user is a member of this organization
-  const { data: member } = await supabase
-    .from('organization_members')
+  const { data: member } = await (supabase.from('organization_members') as any)
     .select('*, organization:organizations(*)')
     .eq('organization_id', organizationId)
     .eq('user_id', user.id)
@@ -47,7 +46,7 @@ export async function getCurrentOrganization(organizationId: string) {
 
   if (!member) return null
 
-  return member.organization as Organization
+  return (member as any).organization as Organization
 }
 
 export async function requireAuth() {

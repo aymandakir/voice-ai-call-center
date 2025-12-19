@@ -14,20 +14,18 @@ async function getSubscription() {
 
   if (!user) return null
 
-  const { data: membership } = await supabase
-    .from('organization_members')
-    .select('organization_id')
-    .eq('user_id', user.id)
-    .single()
+    const { data: membership } = await (supabase.from('organization_members') as any)
+      .select('organization_id')
+      .eq('user_id', user.id)
+      .single()
 
   if (!membership) return null
 
-  const { data: subscription } = await supabase
-    .from('subscriptions')
-    .select('*')
-    .eq('organization_id', membership.organization_id)
-    .eq('status', 'active')
-    .single()
+    const { data: subscription } = await (supabase.from('subscriptions') as any)
+      .select('*')
+      .eq('organization_id', (membership as any)?.organization_id)
+      .eq('status', 'active')
+      .single()
 
   return subscription
 }

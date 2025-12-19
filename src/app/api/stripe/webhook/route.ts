@@ -34,19 +34,20 @@ export async function POST(request: NextRequest) {
 
         // Get subscription
         const subscriptionId = session.subscription as string
-        const subscription = await stripe.subscriptions.retrieve(subscriptionId)
+        const subscription = (await stripe.subscriptions.retrieve(subscriptionId)) as Stripe.Subscription
 
         // Upsert subscription in database
-        await supabase.from('subscriptions').upsert({
+        const subscriptionData = {
           organization_id: organizationId,
           stripe_subscription_id: subscription.id,
-          stripe_customer_id: subscription.customer as string,
+          stripe_customer_id: typeof subscription.customer === 'string' ? subscription.customer : subscription.customer.id,
           status: subscription.status as any,
           plan_id: planId,
-          current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
-          current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
-          cancel_at_period_end: subscription.cancel_at_period_end || false,
-        })
+          current_period_start: new Date((subscription as any).current_period_start * 1000).toISOString(),
+          current_period_end: new Date((subscription as any).current_period_end * 1000).toISOString(),
+          cancel_at_period_end: (subscription as any).cancel_at_period_end || false,
+        }
+        await (supabase.from('subscriptions') as any).upsert(subscriptionData)
 
         console.log('Subscription created:', subscription.id)
         break
@@ -56,14 +57,14 @@ export async function POST(request: NextRequest) {
       case 'customer.subscription.deleted': {
         const subscription = event.data.object as Stripe.Subscription
 
-        await supabase
-          .from('subscriptions')
-          .update({
-            status: subscription.status as any,
-            current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
-            current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
-            cancel_at_period_end: subscription.cancel_at_period_end || false,
-          })
+        const updateData = {
+          status: subscription.status as any,
+          current_period_start: new Date((subscription as any).current_period_start * 1000).toISOString(),
+          current_period_end: new Date((subscription as any).current_period_end * 1000).toISOString(),
+          cancel_at_period_end: (subscription as any).cancel_at_period_end || false,
+        }
+        await (supabase.from('subscriptions') as any)
+          .update(updateData)
           .eq('stripe_subscription_id', subscription.id)
 
         console.log('Subscription updated:', subscription.id)

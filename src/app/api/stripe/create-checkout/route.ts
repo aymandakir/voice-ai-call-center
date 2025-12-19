@@ -21,15 +21,17 @@ export async function POST(request: NextRequest) {
     }
 
     // Get user's organization
-    const { data: membership } = await supabase
+    const { data: membershipData } = await supabase
       .from('organization_members')
       .select('organization_id')
       .eq('user_id', user.id)
       .single()
 
-    if (!membership) {
+    if (!membershipData || !('organization_id' in membershipData)) {
       return NextResponse.json({ error: 'No organization found' }, { status: 400 })
     }
+
+    const membership = membershipData as { organization_id: string }
 
     // Create or get Stripe customer
     const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single()
@@ -43,11 +45,11 @@ export async function POST(request: NextRequest) {
       .eq('organization_id', membership.organization_id)
       .single()
 
-    if (existingSubscription?.stripe_customer_id) {
-      customerId = existingSubscription.stripe_customer_id
+    if (existingSubscription && typeof existingSubscription === 'object' && 'stripe_customer_id' in existingSubscription) {
+      customerId = (existingSubscription as { stripe_customer_id: string }).stripe_customer_id
     } else {
       const customer = await stripe.customers.create({
-        email: user.email || profile?.email || undefined,
+        email: user.email || (profile && typeof profile === 'object' && 'email' in profile ? (profile as { email: string | null }).email : null) || undefined,
         metadata: {
           organization_id: membership.organization_id,
           user_id: user.id,
