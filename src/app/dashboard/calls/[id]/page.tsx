@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { formatPhoneNumber, formatDuration } from '@/lib/utils'
 import { ArrowLeft, Phone, Clock, Tag } from 'lucide-react'
 import { format } from 'date-fns'
+import { ORG_ID } from '@/lib/org-context'
 
 async function getCall(id: string) {
   const supabase = await createClient()
@@ -14,18 +15,10 @@ async function getCall(id: string) {
 
   if (!user) return null
 
-  const { data: memberships } = await (supabase.from('organization_members') as any)
-    .select('organization_id')
-    .eq('user_id', user.id)
-
-  if (!memberships || memberships.length === 0) return null
-
-  const orgIds = (memberships as Array<{ organization_id: string }>).map((m) => m.organization_id)
-
   const { data: call } = await (supabase.from('calls') as any)
     .select('*, agent:agents(*), events:call_events(*)')
     .eq('id', id)
-    .in('organization_id', orgIds)
+    .eq('organization_id', ORG_ID)
     .single()
 
   return call

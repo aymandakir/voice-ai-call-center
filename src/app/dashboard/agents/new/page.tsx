@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { ORG_ID } from '@/lib/org-context'
 
 export default function NewAgentPage() {
   const router = useRouter()
@@ -41,20 +42,9 @@ export default function NewAgentPage() {
       } = await supabase.auth.getUser()
       if (!user) throw new Error('Not authenticated')
 
-      const { data: membershipData } = await supabase
-        .from('organization_members')
-        .select('organization_id')
-        .eq('user_id', user.id)
-        .single()
-
-      if (!membershipData || typeof membershipData !== 'object' || !('organization_id' in membershipData)) {
-        throw new Error('No organization found')
-      }
-      const membership = membershipData as { organization_id: string }
-
-      // Create agent
+      // Create agent - use ORG_ID for isolation
       const agentInsert: any = {
-        organization_id: membership.organization_id,
+        organization_id: ORG_ID,
         ...validated,
       }
       const { data: agent, error: agentError } = await (supabase.from('agents') as any)

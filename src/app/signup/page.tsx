@@ -6,12 +6,12 @@ import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { createClient } from '@/lib/supabase/client'
 import { signUpSchema, type SignUpInput } from '@/lib/schemas'
-import { slugify } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { fadeInUp } from '@/lib/animations'
 import { Sparkles } from 'lucide-react'
+import { ORG_ID } from '@/lib/org-context'
 
 export default function SignUpPage() {
   const router = useRouter()
@@ -69,27 +69,11 @@ export default function SignUpPage() {
         // Continue anyway - profile can be created later
       }
 
-      // Create organization
-      const orgSlug = slugify(formData.organization_name)
-      const { data: orgData, error: orgError } = await (supabase.from('organizations') as any)
-        .insert({
-          name: formData.organization_name,
-          slug: orgSlug,
-        })
-        .select()
-        .single()
-
-      if (orgError) {
-        console.error('Organization creation error:', orgError)
-        setError('Failed to create organization')
-        return
-      }
-
-      // Add user as owner
+      // Add user to voice-demo organization (multi-tenant isolation)
       const { error: memberError } = await (supabase.from('organization_members') as any).insert({
-        organization_id: orgData.id,
+        organization_id: ORG_ID,
         user_id: authData.user.id,
-        role: 'owner',
+        role: 'member',
       })
 
       if (memberError) {

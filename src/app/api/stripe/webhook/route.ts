@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { stripe } from '@/lib/stripe/client'
 import { createClient } from '@/lib/supabase/server'
 import Stripe from 'stripe'
+import { ORG_ID } from '@/lib/org-context'
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!
 
@@ -27,8 +28,8 @@ export async function POST(request: NextRequest) {
         const organizationId = session.metadata?.organization_id
         const planId = session.metadata?.plan_id as 'starter' | 'pro'
 
-        if (!organizationId || !planId) {
-          console.error('Missing metadata in checkout session')
+        if (!organizationId || !planId || organizationId !== ORG_ID) {
+          console.error('Missing metadata or invalid organization_id in checkout session')
           break
         }
 
@@ -36,9 +37,9 @@ export async function POST(request: NextRequest) {
         const subscriptionId = session.subscription as string
         const subscription = (await stripe.subscriptions.retrieve(subscriptionId)) as Stripe.Subscription
 
-        // Upsert subscription in database
+        // Upsert subscription in database - use ORG_ID for isolation
         const subscriptionData = {
-          organization_id: organizationId,
+          organization_id: ORG_ID,
           stripe_subscription_id: subscription.id,
           stripe_customer_id: typeof subscription.customer === 'string' ? subscription.customer : subscription.customer.id,
           status: subscription.status as any,

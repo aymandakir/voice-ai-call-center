@@ -5,6 +5,7 @@ import { PLANS } from '@/lib/types/entities'
 import { formatCurrency } from '@/lib/utils'
 import { Check } from 'lucide-react'
 import { SubscribeButton } from './subscribe-button'
+import { ORG_ID } from '@/lib/org-context'
 
 async function getSubscription() {
   const supabase = await createClient()
@@ -14,18 +15,11 @@ async function getSubscription() {
 
   if (!user) return null
 
-    const { data: membership } = await (supabase.from('organization_members') as any)
-      .select('organization_id')
-      .eq('user_id', user.id)
-      .single()
-
-  if (!membership) return null
-
-    const { data: subscription } = await (supabase.from('subscriptions') as any)
-      .select('*')
-      .eq('organization_id', (membership as any)?.organization_id)
-      .eq('status', 'active')
-      .single()
+  const { data: subscription } = await (supabase.from('subscriptions') as any)
+    .select('*')
+    .eq('organization_id', ORG_ID)
+    .eq('status', 'active')
+    .single()
 
   return subscription
 }

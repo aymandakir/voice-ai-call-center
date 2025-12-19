@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getVoiceProvider } from '@/lib/voice/provider'
 import type { Agent, PhoneNumber, Call } from '@/lib/types/entities'
+import { ORG_ID } from '@/lib/org-context'
 
 // API route to initiate outbound calls
 export async function POST(request: NextRequest) {
@@ -21,10 +22,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    // Get agent and verify access
+    // Get agent and verify access - filter by ORG_ID
     const { data: agentData, error: agentError } = await (supabase.from('agents') as any)
       .select('id, organization_id, voice_provider_id, phone_numbers(*)')
       .eq('id', agent_id)
+      .eq('organization_id', ORG_ID)
       .single()
 
     if (agentError || !agentData) {
@@ -37,10 +39,15 @@ export async function POST(request: NextRequest) {
     const voiceProviderId = (agentData as any).voice_provider_id as string | null
     const phoneNumbers = (agentData as any).phone_numbers as PhoneNumber[] | null
 
+    // Verify organization_id matches ORG_ID
+    if (!organizationId || organizationId !== ORG_ID) {
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+    }
+
     // Verify user has access to organization
     const { data: membership } = await (supabase.from('organization_members') as any)
       .select('*')
-      .eq('organization_id', organizationId)
+      .eq('organization_id', ORG_ID)
       .eq('user_id', user.id)
       .single()
 
@@ -59,9 +66,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No phone number configured for agent' }, { status: 400 })
     }
 
-    // Create call record
+    // Create call record - use ORG_ID for isolation
     const callInsert = {
-      organization_id: organizationId,
+      organization_id: ORG_ID,
       agent_id: agentId,
       phone_number_id: phoneNumber?.id || null,
       direction: 'outbound' as const,

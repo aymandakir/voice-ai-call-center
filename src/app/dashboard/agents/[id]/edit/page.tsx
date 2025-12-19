@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import type { Agent } from '@/lib/types/entities'
+import { ORG_ID } from '@/lib/org-context'
 
 export default function EditAgentPage() {
   const router = useRouter()
@@ -26,10 +27,10 @@ export default function EditAgentPage() {
   useEffect(() => {
     async function fetchAgent() {
       const supabase = createClient()
-      const { data, error: fetchError } = await supabase
-        .from('agents')
+      const { data, error: fetchError } = await (supabase.from('agents') as any)
         .select('*')
         .eq('id', agentId)
+        .eq('organization_id', ORG_ID)
         .single()
 
       if (fetchError || !data) {
@@ -69,6 +70,7 @@ export default function EditAgentPage() {
       const { error: updateError } = await (supabase.from('agents') as any)
         .update(validated)
         .eq('id', agentId)
+        .eq('organization_id', ORG_ID)
 
       if (updateError) throw updateError
 

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { ORG_ID } from '@/lib/org-context'
 
 // Webhook endpoint for voice provider call events
 // This receives events from the voice provider (Vapi, Retell, etc.)
@@ -12,13 +13,14 @@ export async function POST(request: NextRequest) {
 
     const { event, call_id, call } = body
 
-    // Find call by provider_call_id
+    // Find call by provider_call_id - filter by ORG_ID
     let callRecord: { id: string; organization_id?: string } | null = null
     if (call_id || call?.id) {
       const providerCallId = call_id || call?.id
       const { data: existingCall } = await (supabase.from('calls') as any)
         .select('*')
         .eq('provider_call_id', providerCallId)
+        .eq('organization_id', ORG_ID)
         .single()
 
       callRecord = existingCall as { id: string; organization_id?: string } | null
@@ -28,11 +30,11 @@ export async function POST(request: NextRequest) {
       case 'call-started':
       case 'call.initiated': {
         if (!callRecord && call) {
-          // Create new call record
-          const { data: agentData } = await supabase
-            .from('agents')
+          // Create new call record - filter agents by ORG_ID
+          const { data: agentData } = await (supabase.from('agents') as any)
             .select('id, organization_id')
             .eq('voice_provider_id', call.agent_id || call.assistant_id)
+            .eq('organization_id', ORG_ID)
             .single()
 
           if (!agentData || !('organization_id' in agentData) || !('id' in agentData)) {
@@ -42,7 +44,7 @@ export async function POST(request: NextRequest) {
 
           const agent = agentData as { id: string; organization_id: string }
           const callInsert: any = {
-            organization_id: agent.organization_id,
+            organization_id: ORG_ID,
             agent_id: agent.id,
             direction: call.direction || 'inbound',
             from_number: call.from || call.from_number || '',
@@ -129,17 +131,17 @@ export async function POST(request: NextRequest) {
             data: body,
           })
 
-          // Record usage
-          if (callRecord.organization_id) {
+          // Record usage - use ORG_ID for isolation
+          if (callRecord.organization_id === ORG_ID) {
             const minutes = Math.ceil(duration / 60)
             await (supabase.from('usage_records') as any).insert({
-              organization_id: callRecord.organization_id,
+              organization_id: ORG_ID,
               call_id: callRecord.id,
               metric_type: 'minutes',
               quantity: minutes,
             })
             await (supabase.from('usage_records') as any).insert({
-              organization_id: callRecord.organization_id,
+              organization_id: ORG_ID,
               call_id: callRecord.id,
               metric_type: 'calls',
               quantity: 1,

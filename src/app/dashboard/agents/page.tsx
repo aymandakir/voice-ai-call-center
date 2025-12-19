@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Plus, Phone, Edit, Trash2 } from 'lucide-react'
 import { formatPhoneNumber } from '@/lib/utils'
 import type { Agent, PhoneNumber } from '@/lib/types/entities'
+import { ORG_ID } from '@/lib/org-context'
 
 async function getAgents() {
   const supabase = await createClient()
@@ -14,17 +15,9 @@ async function getAgents() {
 
   if (!user) return []
 
-  const { data: memberships } = await (supabase.from('organization_members') as any)
-    .select('organization_id')
-    .eq('user_id', user.id)
-
-  if (!memberships || memberships.length === 0) return []
-
-  const orgIds = (memberships as Array<{ organization_id: string }>).map((m) => m.organization_id)
-
   const { data: agents } = await (supabase.from('agents') as any)
     .select('*, phone_number:phone_numbers(*)')
-    .in('organization_id', orgIds)
+    .eq('organization_id', ORG_ID)
     .order('created_at', { ascending: false })
 
   return (agents || []) as Array<Agent & { phone_number?: PhoneNumber | null }>

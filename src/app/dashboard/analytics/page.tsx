@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 import { format } from 'date-fns'
+import { ORG_ID } from '@/lib/org-context'
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8']
 
@@ -16,21 +17,13 @@ async function getAnalytics() {
 
   if (!user) return null
 
-  const { data: memberships } = await (supabase.from('organization_members') as any)
-    .select('organization_id')
-    .eq('user_id', user.id)
-
-  if (!memberships || memberships.length === 0) return null
-
-  const orgIds = (memberships as Array<{ organization_id: string }>).map((m) => m.organization_id)
-
-  // Get calls from last 30 days
+  // Get calls from last 30 days - filter by ORG_ID
   const thirtyDaysAgo = new Date()
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
 
   const { data: calls } = await (supabase.from('calls') as any)
     .select('*')
-    .in('organization_id', orgIds)
+    .eq('organization_id', ORG_ID)
     .gte('created_at', thirtyDaysAgo.toISOString())
 
   if (!calls) return null
@@ -63,7 +56,7 @@ async function getAnalytics() {
   // Agent performance
   const { data: agents } = await (supabase.from('agents') as any)
     .select('id, name')
-    .in('organization_id', orgIds)
+    .eq('organization_id', ORG_ID)
 
   const agentStats: Record<string, { name: string; calls: number; totalDuration: number }> = {}
   ;(calls as Array<{ agent_id: string; duration_seconds: number | null }>).forEach((call) => {

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { stripe } from '@/lib/stripe/client'
 import { getStripePriceId } from '@/lib/stripe/plans'
+import { ORG_ID } from '@/lib/org-context'
 
 export async function POST(request: NextRequest) {
   try {
@@ -20,29 +21,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid plan' }, { status: 400 })
     }
 
-    // Get user's organization
-    const { data: membershipData } = await supabase
-      .from('organization_members')
-      .select('organization_id')
-      .eq('user_id', user.id)
-      .single()
-
-    if (!membershipData || !('organization_id' in membershipData)) {
-      return NextResponse.json({ error: 'No organization found' }, { status: 400 })
-    }
-
-    const membership = membershipData as { organization_id: string }
-
     // Create or get Stripe customer
     const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single()
 
     let customerId: string
 
-    // Check if organization already has a customer
-    const { data: existingSubscription } = await supabase
-      .from('subscriptions')
+    // Check if organization already has a customer - filter by ORG_ID
+    const { data: existingSubscription } = await (supabase.from('subscriptions') as any)
       .select('stripe_customer_id')
-      .eq('organization_id', membership.organization_id)
+      .eq('organization_id', ORG_ID)
       .single()
 
     if (existingSubscription && typeof existingSubscription === 'object' && 'stripe_customer_id' in existingSubscription) {
@@ -51,7 +38,7 @@ export async function POST(request: NextRequest) {
       const customer = await stripe.customers.create({
         email: user.email || (profile && typeof profile === 'object' && 'email' in profile ? (profile as { email: string | null }).email : null) || undefined,
         metadata: {
-          organization_id: membership.organization_id,
+          organization_id: ORG_ID,
           user_id: user.id,
         },
       })
@@ -72,7 +59,7 @@ export async function POST(request: NextRequest) {
       success_url: `${request.nextUrl.origin}/dashboard/settings?success=true`,
       cancel_url: `${request.nextUrl.origin}/dashboard/settings?canceled=true`,
       metadata: {
-        organization_id: membership.organization_id,
+        organization_id: ORG_ID,
         plan_id: planId,
       },
     })

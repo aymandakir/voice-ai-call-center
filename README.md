@@ -4,12 +4,13 @@ A full-stack SaaS application for building and managing AI-powered voice call ce
 
 ## 🚀 Features
 
-- **Multi-tenant Architecture**: Organizations and workspaces with row-level security
+- **Multi-tenant Architecture**: Organizations and workspaces with row-level security and perfect data isolation via `ORG_ID` filtering
 - **AI Voice Agents**: Create and configure intelligent voice agents with custom personalities and instructions
 - **Call Management**: Handle inbound and outbound calls with real-time logging and transcripts
 - **Analytics Dashboard**: Track call volume, duration, outcomes, and agent performance
 - **Stripe Integration**: Subscription management with usage-based billing
 - **Voice Provider Abstraction**: Easy to integrate with any voice provider (Vapi, Retell, etc.)
+- **Apple-inspired UI**: Beautiful, responsive design with smooth animations and micro-interactions
 
 ## 🛠️ Tech Stack
 
@@ -82,19 +83,19 @@ npm install
 
 ### 4. Configure Environment Variables
 
-Copy `.env.example` to `.env.local` and fill in your values:
+Create `.env.local` file in the root directory with the following variables:
 
 ```bash
-cp .env.example .env.local
+NEXT_PUBLIC_SUPABASE_URL=https://dekupatxeglqacsrqlew.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRla3VwYXR4ZWdscWFjc3JxbGV3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjYwNDMwNDMsImV4cCI6MjA4MTYxOTA0M30.7y0y08CwKq4kGyBTRqK7g2m-bMFr2zzIhuLU7lCbAdI
+SUPABASE_ORG_ID=voice-demo
+STRIPE_SECRET_KEY=your_stripe_secret_key
+STRIPE_WEBHOOK_SECRET=your_stripe_webhook_secret
+STRIPE_STARTER_PRICE_ID=your_starter_price_id
+STRIPE_PRO_PRICE_ID=your_pro_price_id
 ```
 
-Required variables:
-- `NEXT_PUBLIC_SUPABASE_URL` - Your Supabase project URL
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY` - Your Supabase anon key
-- `STRIPE_SECRET_KEY` - Your Stripe secret key
-- `STRIPE_WEBHOOK_SECRET` - Your Stripe webhook secret
-- `STRIPE_STARTER_PRICE_ID` - Stripe price ID for Starter plan
-- `STRIPE_PRO_PRICE_ID` - Stripe price ID for Pro plan
+**Important**: For multi-tenant isolation, all queries and inserts use `SUPABASE_ORG_ID=voice-demo` to ensure perfect data isolation in the shared Supabase instance.
 
 ### 5. Run Development Server
 
